@@ -1,0 +1,37 @@
+{
+  "name": "squidguard",
+  "version": "1.0.0",
+  "description": "Lightweight Node.js monitoring tool with dashboard - plug and play request monitoring",
+  "main": "squidguard.js",
+  "files": [
+    "squidguard.js",
+    "dashboard.html",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "monitoring",
+    "dashboard",
+    "requests",
+    "analytics"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Unknown-Squid/SquidGuard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Unknown-Squid/SquidGuard/issues"
+  },
+  "homepage": "https://github.com/Unknown-Squid/SquidGuard#readme"
+}

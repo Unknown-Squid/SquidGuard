@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SquidGuard - Request Monitoring Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0a0e0f;
+            background: linear-gradient(135deg, #0a0e0f 0%, #1a1f22 100%);
+            color: #e0e0e0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: #1a1f22;
+            border: 1px solid #2a3a2a;
+            padding: 20px 30px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .header h1 {
+            color: #4ade80;
+            margin-bottom: 10px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: #1a1f22;
+            border: 1px solid #2a3a2a;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            transition: transform 0.2s, border-color 0.2s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            border-color: #4ade80;
+            box-shadow: 0 6px 12px rgba(74, 222, 128, 0.2);
+        }
+
+        .stat-card h3 {
+            color: #9ca3af;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #4ade80;
+        }
+
+        .stat-card .sub-value {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: #1a1f22;
+            border: 1px solid #2a3a2a;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .panel h2 {
+            color: #4ade80;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .status-code-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+        }
+
+        .status-code-item {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: #0f1416;
+            border: 1px solid #2a3a2a;
+        }
+
+        .status-code-item .code {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .status-code-item .count {
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        .status-2xx { background: #1a2e1a; border-color: #4ade80; color: #4ade80; }
+        .status-3xx { background: #2e2a1a; border-color: #fbbf24; color: #fbbf24; }
+        .status-4xx { background: #2e1a1a; border-color: #f87171; color: #f87171; }
+        .status-5xx { background: #2e1a1a; border-color: #ef4444; color: #ef4444; }
+
+        .endpoints-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .endpoints-table th {
+            text-align: left;
+            padding: 12px;
+            background: #0f1416;
+            border-bottom: 1px solid #2a3a2a;
+            font-weight: 600;
+            color: #9ca3af;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .endpoints-table td {
+            padding: 12px;
+            border-bottom: 1px solid #1a1f22;
+            color: #e0e0e0;
+        }
+
+        .endpoints-table tr:hover {
+            background: #0f1416;
+        }
+
+        .method-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .method-GET { background: #1a2e1a; color: #4ade80; border: 1px solid #4ade80; }
+        .method-POST { background: #1a1a2e; color: #60a5fa; border: 1px solid #60a5fa; }
+        .method-PUT { background: #2e2a1a; color: #fbbf24; border: 1px solid #fbbf24; }
+        .method-DELETE { background: #2e1a1a; color: #f87171; border: 1px solid #f87171; }
+        .method-PATCH { background: #1a1a1a; color: #9ca3af; border: 1px solid #9ca3af; }
+
+        .requests-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .requests-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .requests-list::-webkit-scrollbar-track {
+            background: #0f1416;
+            border-radius: 4px;
+        }
+
+        .requests-list::-webkit-scrollbar-thumb {
+            background: #2a3a2a;
+            border-radius: 4px;
+        }
+
+        .requests-list::-webkit-scrollbar-thumb:hover {
+            background: #4ade80;
+        }
+
+        .request-item {
+            padding: 15px;
+            border-bottom: 1px solid #1a1f22;
+            display: grid;
+            grid-template-columns: 80px 1fr 100px 80px;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .request-item:last-child {
+            border-bottom: none;
+        }
+
+        .request-item:hover {
+            background: #0f1416;
+        }
+
+        .request-time {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .request-path {
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            word-break: break-all;
+            color: #e0e0e0;
+        }
+
+        .request-status {
+            text-align: center;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .status-success { background: #1a2e1a; color: #4ade80; border: 1px solid #4ade80; }
+        .status-error { background: #2e1a1a; color: #f87171; border: 1px solid #f87171; }
+        .status-warning { background: #2e2a1a; color: #fbbf24; border: 1px solid #fbbf24; }
+
+        .request-duration {
+            text-align: right;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        .refresh-indicator {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #1a1f22;
+            border: 1px solid #2a3a2a;
+            padding: 10px 20px;
+            border-radius: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .refresh-indicator.active {
+            color: #4ade80;
+            border-color: #4ade80;
+        }
+
+        .refresh-indicator.active::after {
+            content: ' ●';
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ SquidGuard Monitoring Dashboard</h1>
+            <div class="refresh-indicator" id="refreshIndicator">Last updated: --</div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>Total Requests</h3>
+                <div class="value" id="totalRequests">0</div>
+                <div class="sub-value" id="requestsPerMinute">0 req/min</div>
+            </div>
+            <div class="stat-card">
+                <h3>Average Response Time</h3>
+                <div class="value" id="avgResponseTime">0ms</div>
+                <div class="sub-value" id="responseTimeRange">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>Uptime</h3>
+                <div class="value" id="uptime">0s</div>
+                <div class="sub-value" id="uptimeFormatted">--</div>
+            </div>
+            <div class="stat-card">
+                <h3>Error Rate</h3>
+                <div class="value" id="errorRate">0%</div>
+                <div class="sub-value" id="errorCount">0 errors</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>Status Codes</h2>
+                <div class="status-code-grid" id="statusCodes"></div>
+            </div>
+
+            <div class="panel">
+                <h2>Top Endpoints</h2>
+                <table class="endpoints-table">
+                    <thead>
+                        <tr>
+                            <th>Method</th>
+                            <th>Path</th>
+                            <th>Count</th>
+                            <th>Avg Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="endpointsTable"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel full-width">
+            <h2>Recent Requests</h2>
+            <div class="requests-list" id="requestsList"></div>
+        </div>
+    </div>
+
+    <script>
+        let autoRefresh = true;
+        let refreshInterval;
+
+        // Get API path from current location or use default
+        const apiPath = window.location.pathname.includes('/dashboard') 
+            ? window.location.pathname.replace('/dashboard', '/api/metrics')
+            : '/api/metrics';
+
+        function updateDashboard() {
+            fetch(apiPath)
+                .then(res => res.json())
+                .then(data => {
+                    // Update stats
+                    document.getElementById('totalRequests').textContent = data.totalRequests.toLocaleString();
+                    document.getElementById('requestsPerMinute').textContent = `${data.requestsPerMinute} req/min`;
+                    document.getElementById('avgResponseTime').textContent = `${data.avgResponseTime}ms`;
+                    document.getElementById('responseTimeRange').textContent = 
+                        `Min: ${data.responseTimeStats.min}ms | Max: ${data.responseTimeStats.max}ms`;
+                    document.getElementById('uptime').textContent = data.uptimeFormatted;
+                    document.getElementById('uptimeFormatted').textContent = `Running since ${new Date(Date.now() - data.uptime).toLocaleTimeString()}`;
+                    
+                    const errorCount = data.errors.length;
+                    const errorRate = data.totalRequests > 0 
+                        ? ((errorCount / data.totalRequests) * 100).toFixed(2) 
+                        : 0;
+                    document.getElementById('errorRate').textContent = `${errorRate}%`;
+                    document.getElementById('errorCount').textContent = `${errorCount} errors`;
+
+                    // Update status codes
+                    const statusCodesDiv = document.getElementById('statusCodes');
+                    statusCodesDiv.innerHTML = '';
+                    Object.entries(data.statusCodes)
+                        .sort((a, b) => parseInt(b[0]) - parseInt(a[0]))
+                        .forEach(([code, count]) => {
+                            const div = document.createElement('div');
+                            div.className = 'status-code-item';
+                            const codeNum = parseInt(code);
+                            if (codeNum >= 200 && codeNum < 300) div.classList.add('status-2xx');
+                            else if (codeNum >= 300 && codeNum < 400) div.classList.add('status-3xx');
+                            else if (codeNum >= 400 && codeNum < 500) div.classList.add('status-4xx');
+                            else if (codeNum >= 500) div.classList.add('status-5xx');
+                            
+                            div.innerHTML = `
+                                <div class="code">${code}</div>
+                                <div class="count">${count}</div>
+                            `;
+                            statusCodesDiv.appendChild(div);
+                        });
+
+                    // Update endpoints table
+                    const endpointsTable = document.getElementById('endpointsTable');
+                    endpointsTable.innerHTML = '';
+                    Object.entries(data.endpoints)
+                        .sort((a, b) => b[1].count - a[1].count)
+                        .slice(0, 10)
+                        .forEach(([endpoint, stats]) => {
+                            const [method, path] = endpoint.split(' ');
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><span class="method-badge method-${method}">${method}</span></td>
+                                <td>${path}</td>
+                                <td>${stats.count}</td>
+                                <td>${stats.avgDuration}ms</td>
+                            `;
+                            endpointsTable.appendChild(tr);
+                        });
+
+                    // Update recent requests
+                    const requestsList = document.getElementById('requestsList');
+                    requestsList.innerHTML = '';
+                    data.recentRequests.slice(0, 50).forEach(req => {
+                        const div = document.createElement('div');
+                        div.className = 'request-item';
+                        const statusClass = req.statusCode >= 500 ? 'status-error' : 
+                                          req.statusCode >= 400 ? 'status-warning' : 'status-success';
+                        const [method] = req.method.split(' ');
+                        div.innerHTML = `
+                            <div class="request-time">${new Date(req.timestamp).toLocaleTimeString()}</div>
+                            <div class="request-path">
+                                <span class="method-badge method-${method}">${method}</span>
+                                ${req.path}
+                            </div>
+                            <div class="request-status ${statusClass}">${req.statusCode}</div>
+                            <div class="request-duration">${req.duration}ms</div>
+                        `;
+                        requestsList.appendChild(div);
+                    });
+
+                    // Update refresh indicator
+                    const indicator = document.getElementById('refreshIndicator');
+                    indicator.textContent = `Last updated: ${new Date().toLocaleTimeString()}`;
+                    indicator.classList.add('active');
+                    setTimeout(() => indicator.classList.remove('active'), 500);
+                })
+                .catch(err => {
+                    console.error('Error fetching metrics:', err);
+                });
+        }
+
+        // Initial load
+        updateDashboard();
+
+        // Auto-refresh every 2 seconds
+        refreshInterval = setInterval(() => {
+            if (autoRefresh) {
+                updateDashboard();
+            }
+        }, 2000);
+
+        // Pause on window blur, resume on focus
+        window.addEventListener('blur', () => autoRefresh = false);
+        window.addEventListener('focus', () => {
+            autoRefresh = true;
+            updateDashboard();
+        });
+    </script>
+</body>
+</html>
