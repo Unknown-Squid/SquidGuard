@@ -645,18 +645,6 @@
             }, 150);
         });
 
-        // Handle window resize to update charts
-        let resizeTimeout;
-        window.addEventListener('resize', () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(() => {
-                if (responseTimeChart) responseTimeChart.resize();
-                if (requestsChart) requestsChart.resize();
-                if (statusCodeChart) statusCodeChart.resize();
-                if (endpointsChart) endpointsChart.resize();
-            }, 150);
-        });
-
         // Get API path from current location or use default
         const apiPath = window.location.pathname.includes('/dashboard') 
             ? window.location.pathname.replace('/dashboard', '/api/metrics')
@@ -664,7 +652,12 @@
 
         function updateDashboard() {
             fetch(apiPath)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error(`HTTP error! status: ${res.status}`);
+                    }
+                    return res.json();
+                })
                 .then(data => {
                     // Update charts
                     updateCharts(data);
@@ -753,6 +746,12 @@
                 })
                 .catch(err => {
                     console.error('Error fetching metrics:', err);
+                    console.error('API Path:', apiPath);
+                    console.error('Full URL:', window.location.origin + apiPath);
+                    // Show error in dashboard
+                    const indicator = document.getElementById('refreshIndicator');
+                    indicator.textContent = `Error: ${err.message}`;
+                    indicator.style.color = '#f87171';
                 });
         }
 
