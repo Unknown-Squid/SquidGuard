@@ -12,8 +12,13 @@ const metrics = {
 };
 
 // Request monitoring middleware
-function squidGuardMiddleware() {
+function squidGuardMiddleware(excludedPaths = []) {
   return (req, res, next) => {
+    // Skip monitoring for excluded paths (dashboard, metrics API, etc.)
+    if (excludedPaths.some(path => req.path === path || req.path.startsWith(path))) {
+      return next();
+    }
+    
     const startTime = Date.now();
     const requestId = Date.now() + Math.random();
     
@@ -159,19 +164,30 @@ function setupRoutes(app, options = {}) {
 
 // Main function to integrate SquidGuard into an Express app
 function squidGuard(app, options = {}) {
-  // Add middleware
-  app.use(squidGuardMiddleware());
+  const dashboardPath = options.dashboardPath || '/dashboard';
+  const apiPath = options.apiPath || '/api/metrics';
+  
+  // Exclude monitoring routes from being tracked
+  // Users can also add custom excluded paths via options.excludePaths
+  const excludedPaths = [
+    dashboardPath, 
+    apiPath,
+    ...(options.excludePaths || [])  // Additional paths to exclude
+  ];
+  
+  // Add middleware with excluded paths
+  app.use(squidGuardMiddleware(excludedPaths));
   
   // Setup routes
   setupRoutes(app, options);
   
   return {
-    middleware: squidGuardMiddleware(),
+    middleware: squidGuardMiddleware(excludedPaths),
     getMetrics: getMetrics
   };
 }
 
 module.exports = squidGuard;
-module.exports.middleware = squidGuardMiddleware;
+module.exports.middleware = (excludedPaths) => squidGuardMiddleware(excludedPaths);
 module.exports.getMetrics = getMetrics;
 module.exports.setupRoutes = setupRoutes;
