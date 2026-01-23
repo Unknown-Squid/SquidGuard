@@ -18,6 +18,7 @@
             color: #e0e0e0;
             padding: 20px;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         .container {
@@ -41,9 +42,23 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
             margin-bottom: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+                grid-template-rows: repeat(2, auto);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
         }
 
         .stat-card {
@@ -275,8 +290,62 @@
             grid-column: 1 / -1;
         }
 
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .chart-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .chart-container::-webkit-scrollbar-track {
+            background: #0f1416;
+            border-radius: 4px;
+        }
+
+        .chart-container::-webkit-scrollbar-thumb {
+            background: #2a3a2a;
+            border-radius: 4px;
+        }
+
+        .chart-container::-webkit-scrollbar-thumb:hover {
+            background: #4ade80;
+        }
+
+        .chart-container.large {
+            height: 400px;
+        }
+
+        .chart-wrapper {
+            min-width: 100%;
+            width: 100%;
+        }
+
+        @media (max-width: 1024px) {
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         @media (max-width: 768px) {
             .main-content {
+                grid-template-columns: 1fr;
+            }
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+            .stats-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -312,25 +381,55 @@
             </div>
         </div>
 
-        <div class="main-content">
+        <div class="charts-grid">
             <div class="panel">
-                <h2>Status Codes</h2>
-                <div class="status-code-grid" id="statusCodes"></div>
+                <h2>Response Time Over Time</h2>
+                <div class="chart-container">
+                    <div class="chart-wrapper">
+                        <canvas id="responseTimeChart"></canvas>
+                    </div>
+                </div>
             </div>
 
             <div class="panel">
-                <h2>Top Endpoints</h2>
-                <table class="endpoints-table">
-                    <thead>
-                        <tr>
-                            <th>Method</th>
-                            <th>Path</th>
-                            <th>Count</th>
-                            <th>Avg Time</th>
-                        </tr>
-                    </thead>
-                    <tbody id="endpointsTable"></tbody>
-                </table>
+                <h2>Requests Per Minute</h2>
+                <div class="chart-container">
+                    <div class="chart-wrapper">
+                        <canvas id="requestsChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>Status Code Distribution</h2>
+                <div class="chart-container">
+                    <div class="chart-wrapper">
+                        <canvas id="statusCodeChart"></canvas>
+                    </div>
+                </div>
+                <div class="status-code-grid" id="statusCodes" style="margin-top: 20px;"></div>
+            </div>
+
+            <div class="panel">
+                <h2>Top Endpoints by Requests</h2>
+                <div class="chart-container">
+                    <div class="chart-wrapper">
+                        <canvas id="endpointsChart"></canvas>
+                    </div>
+                </div>
+                <div style="margin-top: 20px;">
+                    <table class="endpoints-table">
+                        <thead>
+                            <tr>
+                                <th>Method</th>
+                                <th>Path</th>
+                                <th>Count</th>
+                                <th>Avg Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="endpointsTable"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -340,9 +439,223 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script>
         let autoRefresh = true;
         let refreshInterval;
+        
+        // Chart instances
+        let responseTimeChart, requestsChart, statusCodeChart, endpointsChart;
+        
+        // Chart data storage
+        let responseTimeData = [];
+        let requestsPerMinuteData = [];
+        let timeLabels = [];
+        const MAX_DATA_POINTS = 30;
+        
+        // Initialize charts
+        function initCharts() {
+            const chartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        labels: {
+                            color: '#9ca3af'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: '#1a1f22' }
+                    },
+                    y: {
+                        ticks: { color: '#9ca3af' },
+                        grid: { color: '#1a1f22' }
+                    }
+                }
+            };
+            
+            // Response Time Chart
+            responseTimeChart = new Chart(document.getElementById('responseTimeChart'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: [],
+                        borderColor: '#4ade80',
+                        backgroundColor: 'rgba(74, 222, 128, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: chartOptions
+            });
+            
+            // Requests Per Minute Chart
+            requestsChart = new Chart(document.getElementById('requestsChart'), {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Requests/min',
+                        data: [],
+                        borderColor: '#60a5fa',
+                        backgroundColor: 'rgba(96, 165, 250, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: chartOptions
+            });
+            
+            // Status Code Chart
+            statusCodeChart = new Chart(document.getElementById('statusCodeChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        data: [],
+                        backgroundColor: [
+                            '#4ade80', // 2xx - green
+                            '#fbbf24', // 3xx - yellow
+                            '#f87171', // 4xx - red
+                            '#ef4444'  // 5xx - dark red
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#9ca3af',
+                                padding: 15
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Endpoints Chart
+            endpointsChart = new Chart(document.getElementById('endpointsChart'), {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Request Count',
+                        data: [],
+                        backgroundColor: '#4ade80',
+                        borderColor: '#4ade80',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    ...chartOptions,
+                    indexAxis: 'y',
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update charts with new data
+        function updateCharts(data) {
+            const now = new Date().toLocaleTimeString();
+            
+            // Update Response Time Chart
+            responseTimeData.push(data.avgResponseTime);
+            timeLabels.push(now);
+            
+            if (responseTimeData.length > MAX_DATA_POINTS) {
+                responseTimeData.shift();
+                timeLabels.shift();
+            }
+            
+            responseTimeChart.data.labels = timeLabels;
+            responseTimeChart.data.datasets[0].data = responseTimeData;
+            responseTimeChart.update('none');
+            
+            // Update Requests Per Minute Chart
+            requestsPerMinuteData.push(data.requestsPerMinute);
+            if (requestsPerMinuteData.length > MAX_DATA_POINTS) {
+                requestsPerMinuteData.shift();
+            }
+            
+            requestsChart.data.labels = timeLabels;
+            requestsChart.data.datasets[0].data = requestsPerMinuteData;
+            requestsChart.update('none');
+            
+            // Update Status Code Chart
+            const statusLabels = [];
+            const statusValues = [];
+            const statusColors = [];
+            
+            Object.entries(data.statusCodes).forEach(([code, count]) => {
+                const codeNum = parseInt(code);
+                statusLabels.push(`${code} (${count})`);
+                statusValues.push(count);
+                
+                if (codeNum >= 200 && codeNum < 300) statusColors.push('#4ade80');
+                else if (codeNum >= 300 && codeNum < 400) statusColors.push('#fbbf24');
+                else if (codeNum >= 400 && codeNum < 500) statusColors.push('#f87171');
+                else statusColors.push('#ef4444');
+            });
+            
+            statusCodeChart.data.labels = statusLabels;
+            statusCodeChart.data.datasets[0].data = statusValues;
+            statusCodeChart.data.datasets[0].backgroundColor = statusColors;
+            statusCodeChart.update('none');
+            
+            // Update Endpoints Chart
+            const topEndpoints = Object.entries(data.endpoints)
+                .sort((a, b) => b[1].count - a[1].count)
+                .slice(0, 10);
+            
+            const endpointLabels = topEndpoints.map(([endpoint]) => {
+                const [method, path] = endpoint.split(' ');
+                return `${method} ${path.length > 30 ? path.substring(0, 30) + '...' : path}`;
+            });
+            const endpointValues = topEndpoints.map(([, stats]) => stats.count);
+            
+            endpointsChart.data.labels = endpointLabels;
+            endpointsChart.data.datasets[0].data = endpointValues;
+            endpointsChart.update('none');
+        }
+        
+        // Initialize charts on load
+        initCharts();
+
+        // Handle window resize to update charts
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (responseTimeChart) responseTimeChart.resize();
+                if (requestsChart) requestsChart.resize();
+                if (statusCodeChart) statusCodeChart.resize();
+                if (endpointsChart) endpointsChart.resize();
+            }, 150);
+        });
+
+        // Handle window resize to update charts
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(() => {
+                if (responseTimeChart) responseTimeChart.resize();
+                if (requestsChart) requestsChart.resize();
+                if (statusCodeChart) statusCodeChart.resize();
+                if (endpointsChart) endpointsChart.resize();
+            }, 150);
+        });
 
         // Get API path from current location or use default
         const apiPath = window.location.pathname.includes('/dashboard') 
@@ -353,6 +666,9 @@
             fetch(apiPath)
                 .then(res => res.json())
                 .then(data => {
+                    // Update charts
+                    updateCharts(data);
+                    
                     // Update stats
                     document.getElementById('totalRequests').textContent = data.totalRequests.toLocaleString();
                     document.getElementById('requestsPerMinute').textContent = `${data.requestsPerMinute} req/min`;

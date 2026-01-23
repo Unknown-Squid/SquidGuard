@@ -16,27 +16,45 @@ insight into their server performance.
 
 ## Installation
 
-### Install from npm (for use in your projects)
+### Option 1: Clone from GitHub (Recommended)
+
+**Clone the repository:**
+```bash
+git clone https://github.com/Unknown-Squid/SquidGuard.git
+cd SquidGuard
+npm install
+```
+
+**Or use it in your existing project:**
+```bash
+# In your project directory
+git clone https://github.com/Unknown-Squid/SquidGuard.git
+# Or add as submodule: git submodule add https://github.com/Unknown-Squid/SquidGuard.git
+```
+
+Then in your code, use the relative path:
+```javascript
+const squidGuard = require('./SquidGuard/squidguard');
+// or if you copied files to your project:
+const squidGuard = require('./squidguard');
+```
+
+### Option 2: Install from npm
 
 ```bash
 npm install squidguard
 ```
 
-### Install locally (for development)
-
-```bash
-npm install
-```
-
 ## Usage
 
-### Plug-and-Play Integration (Recommended)
+### Plug-and-Play Integration
 
 Add SquidGuard to your existing Express app in just 2 lines:
 
+**If cloned from GitHub:**
 ```javascript
 const express = require('express');
-const squidGuard = require('squidguard');
+const squidGuard = require('./path/to/SquidGuard/squidguard');
 
 const app = express();
 
@@ -49,6 +67,16 @@ app.get('/api/users', (req, res) => {
 });
 
 app.listen(3000);
+```
+
+**If installed via npm:**
+```javascript
+const express = require('express');
+const squidGuard = require('squidguard');
+
+const app = express();
+squidGuard(app);
+// ... your routes
 ```
 
 Now visit `http://localhost:3000/dashboard` to see your monitoring dashboard!
@@ -63,9 +91,8 @@ squidGuard(app, {
 
 ### Standalone Server
 
-If you cloned this repo, you can run it standalone:
+Run the standalone demo server:
 
-Start the standalone server:
 ```bash
 npm start
 ```
@@ -78,29 +105,6 @@ npm run dev
 Access the dashboard:
 ```
 http://localhost:5002/dashboard
-```
-
-const app = express();
-
-// Plug in SquidGuard - that's it!
-squidGuard(app);
-
-// Your existing routes...
-app.get('/api/users', (req, res) => {
-  res.json({ users: [] });
-});
-
-app.listen(3000);
-```
-
-Now visit `http://localhost:3000/dashboard` to see your monitoring dashboard!
-
-**Custom paths (optional):**
-```javascript
-squidGuard(app, {
-  dashboardPath: '/monitor',  // Custom dashboard path
-  apiPath: '/metrics'          // Custom API path
-});
 ```
 
 See `example-usage.js` for a complete example.
