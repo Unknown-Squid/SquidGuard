@@ -13,7 +13,9 @@ app.use(express.json());
 // Plug in SquidGuard - that's it!
 squidGuard(app, {
   dashboardPath: '/dashboard',  // Optional: default is '/dashboard'
-  apiPath: '/api/metrics'        // Optional: default is '/api/metrics'
+  apiPath: '/api/metrics',        // Optional: default is '/api/metrics'
+  // Only monitor requests from these front-end domains
+  frontendDomains: ['localhost:3000', 'localhost:3001']  // Add your front-end domains
 });
 
 // Your existing routes
