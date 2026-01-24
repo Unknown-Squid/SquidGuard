@@ -13,7 +13,9 @@ app.use(express.urlencoded({ extended: true }));
 // Plug in SquidGuard - it's that easy!
 squidGuard(app, {
   dashboardPath: '/dashboard',
-  apiPath: '/api/metrics'
+  apiPath: '/api/metrics',
+  // Only monitor requests from these front-end domains
+  frontendDomains: ['localhost:3000', 'localhost:3001']  // Add your front-end domains here
 });
 
 // Serve static assets if needed
